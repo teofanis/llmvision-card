@@ -232,6 +232,9 @@ export class BaseLLMVisionCard extends HTMLElement {
         const menuItemClass = `${prefix}-menu-item`;
         const menuDeleteClass = `${prefix}-menu-item-delete`;
 
+        const normalize = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
+        const shouldShowCategory = Boolean(category && !(label && normalize(label) === normalize(category)));
+
         const htmlBlock = `
                 <div>
                     <div class="${headerRowClass}">
@@ -261,7 +264,7 @@ export class BaseLLMVisionCard extends HTMLElement {
                         </div>
                         <div class="${prefix}-title-tertiary">
                             <div class="${prefix}-badges-row">
-                                ${category ? `
+                                ${shouldShowCategory ? `
                                 <span class="${prefix}-badge">
                                     <ha-icon icon="mdi:label"></ha-icon>
                                     <span class="text" style="text-transform: capitalize;">${category}</span>
@@ -337,9 +340,12 @@ export class BaseLLMVisionCard extends HTMLElement {
                         align-items: center;
                         gap: 10px;
                         justify-content: center;
+                        width: 100%;
                     }
                     .${prefix}-title-main h2 {
-                        max-width: 95%;
+                        flex: 1 1 auto;
+                        min-width: 0;
+                        max-width: 100%;
                         overflow: hidden;
                         text-overflow: ellipsis;
                         white-space: nowrap;
