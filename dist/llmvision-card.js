@@ -122,7 +122,7 @@ class TimelineCardEditor extends LitElement {
     }
     _computeLabel(s) {
         return ({
-            header: "Header", entity: "Calendar Entity", number_of_events: "Number of Events",
+            header: "Header", number_of_events: "Number of Events",
             number_of_days: "Number of Days", category_filters: "Category Filters",
             camera_filters: "Camera Filters", custom_colors: "Custom Colors", language: "Language",
             default_icon: "Default Icon", default_color: "Default Color"

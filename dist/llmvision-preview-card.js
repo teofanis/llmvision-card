@@ -8,10 +8,9 @@ export class TimelinePreviewCardEditor extends LitElement {
     setConfig(config) { this._config = config || {}; }
     render() {
         if (!this._config) return html`<div>Please configure the card.</div>`;
-        const generalSchema = this._getSchema().slice(0, 1);
-        const filterSchema = this._getSchema().slice(1, 3);
-        const languageSchema = this._getSchema().slice(3, 4);
-        const customizeSchema = this._getSchema().slice(4);
+        const filterSchema = this._getSchema().slice(0, 2);
+        const languageSchema = this._getSchema().slice(2, 3);
+        const customizeSchema = this._getSchema().slice(3);
         return html`
             <style>
                 .preview-card-content { display:flex; flex-direction:column; gap:16px; }
@@ -25,14 +24,6 @@ export class TimelinePreviewCardEditor extends LitElement {
             </style>
             <ha-card>
                 <div class="preview-card-content">
-                    <details open>
-                        <summary><ha-icon class="section-icon" icon="mdi:cog"></ha-icon>General</summary>
-                        <div class="section-content">
-                            <ha-form .data=${this._config} .schema=${generalSchema}
-                                .computeLabel=${this._computeLabel} .computeHelper=${this._computeHelper}
-                                @value-changed=${this._valueChanged}></ha-form>
-                        </div>
-                    </details>
                     <details>
                         <summary><ha-icon class="section-icon" icon="mdi:filter-variant"></ha-icon>Filters</summary>
                         <div class="section-content">
@@ -62,18 +53,6 @@ export class TimelinePreviewCardEditor extends LitElement {
         `;
     }
     _getSchema() {
-        const generalSchema = [{
-            name: "entity",
-            description: "Select the LLM Vision timeline entity to display.",
-            selector: {
-                select: {
-                    mode: "dropdown",
-                    options: Object.keys(this.hass.states)
-                        .filter(e => e.startsWith('calendar.'))
-                        .map(e => ({ value: e, label: this.hass.states[e].attributes.friendly_name || e }))
-                }
-            }
-        }];
         const filterSchema = [
             {
                 name: "category_filters",
@@ -120,7 +99,7 @@ export class TimelinePreviewCardEditor extends LitElement {
         ];
         const customizeSchema = [
             { name: "default_icon", description: "Icon when no category keyword matches.", selector: { icon: {} } }]
-        return [...generalSchema, ...filterSchema, ...languageSchema, ...customizeSchema];
+        return [...filterSchema, ...languageSchema, ...customizeSchema];
     }
     _computeLabel(s) {
         return ({

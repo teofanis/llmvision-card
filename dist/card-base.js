@@ -1,6 +1,6 @@
-import { translate, hexToRgba } from './helpers.js?v=1.5.2';
+import { translate, hexToRgba } from './helpers.js?v=1.6.0-alpha3';
 
-const __LLMVISION_VERSION = 'v1.6.0 alpha 1';
+const __LLMVISION_VERSION = 'v1.6.0 alpha 3';
 function __logLLMVisionBadge(context) {
     if (!window.__LLMVISION_BADGE_LOGGED) {
         console.log(
@@ -346,9 +346,9 @@ export class BaseLLMVisionCard extends HTMLElement {
                         flex: 1 1 auto;
                         min-width: 0;
                         max-width: 100%;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
+                        overflow: visible;
+                        white-space: normal;
+                        word-break: break-word;
                         margin: 0;
                         font-family: var(--ha-font-family-heading, "Roboto");
                         text-align: center;
