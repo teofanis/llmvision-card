@@ -154,14 +154,17 @@ export class LLMVisionPreviewCard extends BaseLLMVisionCard {
             this.style.display = 'block';
             this.style.height = '100%';
             this.innerHTML = `
-                <ha-card><div class="preview-card-content"></div></ha-card>
+                <ha-card class="llm-preview-card"><div class="preview-card-content"></div></ha-card>
                 <style>
+                .llm-preview-card{height:100%;display:flex;}
+                .llm-preview-card .preview-card-content{flex:1;display:flex;flex-direction:column;}
                 .preview-event-container{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:var(--ha-card-border-radius,12px);background:var(--ha-card-background,var(--card-background-color,#f3f3f3));cursor:pointer;}
                 .preview-event-image{position:absolute;inset:0;width:100%;height:100%;border-radius:var(--ha-card-border-radius,12px);object-fit:cover;display:block;}
                 .preview-event-vignette{position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(to bottom,rgba(0,0,0,0.55)0%,rgba(0,0,0,0)30%,rgba(0,0,0,0)70%,rgba(0,0,0,0.55)100%);border-radius:var(--ha-card-border-radius,12px);}
                 .preview-icon-container{position:absolute;top:3px;left:3px;width:40px;height:40px;border-radius:var(--ha-card-border-radius,25px);display:flex;align-items:center;justify-content:center;background:none;z-index:2;}
                 .preview-event-title{position:absolute;left:44px;top:14px;color:#fff;font-size:var(--ha-font-size-l,16px);font-weight:var(--ha-font-weight-medium,500);z-index:2;max-width:80%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
                 .preview-event-details{position:absolute;left:12px;bottom:12px;color:rgba(255,255,255,0.9);font-size:var(--ha-font-size-m,14px);font-weight:var(--ha-font-weight-medium,500);z-index:2;max-width:80%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+                .preview-empty-state{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;}
                 </style>
             `;
             this.content = this.querySelector('.preview-card-content');
@@ -200,7 +203,7 @@ export class LLMVisionPreviewCard extends BaseLLMVisionCard {
             else key = 'noEvents';
             let msg = translate(key, this.language) || "No events found.";
             if (key === 'noEventsHours') msg = msg.replace('{hours}', this.number_of_days);
-            this.content.innerHTML = `<div class="event-container" style="display:flex;align-items:center;justify-content:center;height:100%;"><h3>${msg}</h3></div>`;
+            this.content.innerHTML = `<div class="event-container preview-empty-state"><h3>${msg}</h3></div>`;
             return;
         }
         this._render(details, hass);

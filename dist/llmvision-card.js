@@ -203,6 +203,7 @@ class LLMVisionCard extends BaseLLMVisionCard {
                     .card-content{padding:0;flex:1 1 auto;min-height:0;overflow:auto;}
 
                     .event-container{display:flex;align-items:center;justify-content:flex-start;height:75px;cursor:pointer;margin-bottom:8px;}
+                    .event-container.empty-state{height:100%;justify-content:center;align-items:center;text-align:center;cursor:default;margin-bottom:0;}
                     .event-container:last-child{margin-bottom:0;}
                     .event-container img{height:100%;aspect-ratio:1/1;margin-left:auto;border-radius:12px;object-fit:cover;}
                     .event-container h3{font-weight:var(--ha-font-weight-medium,500);font-size:var(--ha-font-size-m,14px);margin:0;flex-grow:1;color:var(--primary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -254,7 +255,7 @@ class LLMVisionCard extends BaseLLMVisionCard {
             else key = 'noEvents';
             let msg = translate(key, this.language) || "No events found.";
             if (key === 'noEventsHours') msg = msg.replace('{hours}', this.number_of_days);
-            this.content.innerHTML = `<div class="event-container" style="display:flex;align-items:center;justify-content:center;height:100%;"><h3>${msg}</h3></div>`;
+            this.content.innerHTML = `<div class="event-container empty-state"><h3>${msg}</h3></div>`;
             return;
         }
         this._render(details, hass);
