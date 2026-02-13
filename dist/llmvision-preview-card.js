@@ -1,7 +1,7 @@
-import { getIcon, translate } from './helpers.js?v=1.6.0-alpha3';
-import { labels } from './labels.js?v=1.6.0-alpha3';
+import { getIcon, translate } from './helpers.js?v=1.6.0';
+import { labels } from './labels.js?v=1.6.0';
 import { LitElement, css, html } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
-import { BaseLLMVisionCard } from './card-base.js?v=1.6.0-alpha3';
+import { BaseLLMVisionCard } from './card-base.js?v=1.6.0';
 
 export class TimelinePreviewCardEditor extends LitElement {
     static get properties() { return { _config: { type: Object } }; }

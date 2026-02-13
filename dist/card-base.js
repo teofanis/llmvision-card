@@ -1,6 +1,6 @@
-import { translate, hexToRgba } from './helpers.js?v=1.6.0-alpha3';
+import { translate, hexToRgba } from './helpers.js?v=1.6.0';
 
-const __LLMVISION_VERSION = 'v1.6.0 alpha 3';
+const __LLMVISION_VERSION = 'v1.6.0';
 function __logLLMVisionBadge(context) {
     if (!window.__LLMVISION_BADGE_LOGGED) {
         console.log(
