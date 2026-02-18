@@ -1,18 +1,19 @@
-import { getIcon, translate } from './helpers.js?v=1.5.2';
-import { colors } from './colors.js?v=1.5.2';
+import { getIcon, translate } from './helpers.js?v=1.6.0';
+import { labels } from './labels.js?v=1.6.0';
 import { LitElement, css, html } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
-import { BaseLLMVisionCard } from './card-base.js?v=1.5.2';
-import { LLMVisionPreviewCard } from './llmvision-preview-card.js?v=1.5.2';
+import { BaseLLMVisionCard } from './card-base.js?v=1.6.0';
+import { LLMVisionPreviewCard } from './llmvision-preview-card.js?v=1.6.0';
 
 class TimelineCardEditor extends LitElement {
     static get properties() { return { _config: { type: Object } }; }
     setConfig(config) { this._config = config || {}; }
     render() {
         if (!this._config) return html`<div>Please configure the card.</div>`;
-        const generalSchema = this._getSchema().slice(0, 2);
-        const filterSchema = this._getSchema().slice(2, 6);
-        const languageSchema = this._getSchema().slice(6, 7);
-        const customizeSchema = this._getSchema().slice(7);
+        const schema = this._getSchema();
+        const generalSchema = schema.slice(0, 3);
+        const filterSchema = schema.slice(3, 6);
+        const localeSchema = schema.slice(6, 8);
+        const customizeSchema = schema.slice(8);
         return html`
             <style>
                 .card-content{display:flex;flex-direction:column;gap:16px;}
@@ -43,9 +44,9 @@ class TimelineCardEditor extends LitElement {
                         </div>
                     </details>
                     <details>
-                        <summary><ha-icon class="section-icon" icon="mdi:translate"></ha-icon>Language</summary>
+                        <summary><ha-icon class="section-icon" icon="mdi:translate"></ha-icon>Locale</summary>
                         <div class="section-content">
-                            <ha-form .data=${this._config} .schema=${languageSchema}
+                            <ha-form .data=${this._config} .schema=${localeSchema}
                                 .computeLabel=${this._computeLabel} .computeHelper=${this._computeHelper}
                                 @value-changed=${this._valueChanged}></ha-form>
                         </div>
@@ -65,23 +66,13 @@ class TimelineCardEditor extends LitElement {
     _getSchema() {
         const generalSchema = [
             { name: "header", description: "Header text for the card.", selector: { text: {} } },
-            {
-                name: "entity", description: "Select the LLM Vision timeline entity to display.",
-                selector: {
-                    select: {
-                        mode: "dropdown", options: Object.keys(this.hass.states)
-                            .filter(e => e.startsWith('calendar.'))
-                            .map(e => ({ value: e, label: this.hass.states[e].attributes.friendly_name || e }))
-                    }
-                }
-            }
+            { name: "number_of_events", description: "Number of most recent events to display. A maximum of 10 events can be displayed.", selector: { number: { min: 1, max: 100, step: 1 } } },
+            { name: "number_of_days", description: "Number of days to look back for events. Useful for filtering older events.", selector: { number: { min: 1, max: 365, step: 1 } } },
         ];
         const filterSchema = [
-            { name: "number_of_events", description: "Number of most recent events to display. A maximum of 10 events can be displayed.", selector: { number: { min: 1, max: 10, step: 1 } } },
-            { name: "number_of_hours", description: "Number of hours to look back for events. Useful for filtering older events.", selector: { number: { min: 1, max: 168, step: 1 } } },
             {
                 name: "category_filters", description: "Filter events by category (title). Only events matching selected categories will be shown.",
-                selector: { select: { multiple: true, options: Object.keys(colors.categories).map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) })) } }
+                selector: { select: { multiple: true, options: Object.keys(labels).map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) })) } }
             },
             {
                 name: "camera_filters", description: "Filter events by camera entity. Only events from selected cameras will be shown.",
@@ -92,15 +83,21 @@ class TimelineCardEditor extends LitElement {
                             .map(e => ({ value: e, label: this.hass.states[e].attributes.friendly_name || e }))
                     }
                 }
+            },
+            {
+                name: "filter_false_positives",
+                description: "Hide events titled 'No activity observed'.",
+                selector: { boolean: { default: true } }
             }
         ];
-        const languageSchema = [
+        const localeSchema = [
             {
                 name: "language",
                 description: "Language for the card. This will be used to generate icons and translations.",
                 selector: {
                     select: {
                         options: [
+                            { value: "bg", label: "Bulgarian" },
                             { value: "ca", label: "Catalan" },
                             { value: "cz", label: "Czech" },
                             { value: "nl", label: "Dutch" },
@@ -117,23 +114,37 @@ class TimelineCardEditor extends LitElement {
                         ]
                     }
                 }
+            },
+            {
+                name: "time_format",
+                description: "Choose between 12-hour and 24-hour time display.",
+                selector: {
+                    select: {
+                        options: [
+                            { value: "24h", label: "24-hour" },
+                            { value: "12h", label: "12-hour" }
+                        ]
+                    }
+                }
             }
         ];
         const customizeSchema = [
             { name: "default_icon", description: "Icon when no category keyword matches.", selector: { icon: {} } },
             { name: "default_color", description: "Color for uncategorized events.", selector: { color_rgb: {} } },
-        ].concat(Object.keys(colors.categories).map(c => ({
+        ].concat(Object.keys(labels).map(c => ({
             name: `custom_colors.${c}`,
             description: `Color for ${c.charAt(0).toUpperCase() + c.slice(1)}`,
             selector: { color_rgb: {} }
         })));
-        return [...generalSchema, ...filterSchema, ...languageSchema, ...customizeSchema];
+        return [...generalSchema, ...filterSchema, ...localeSchema, ...customizeSchema];
     }
     _computeLabel(s) {
         return ({
-            header: "Header", entity: "Calendar Entity", number_of_events: "Number of Events",
-            number_of_hours: "Number of Hours", category_filters: "Category Filters",
-            camera_filters: "Camera Filters", custom_colors: "Custom Colors", language: "Language",
+            header: "Header", number_of_events: "Number of Events",
+            number_of_days: "Number of Days", category_filters: "Category Filters",
+            camera_filters: "Camera Filters", filter_false_positives: "Filter False Positives",
+            custom_colors: "Custom Colors", language: "Language",
+            time_format: "Time Format",
             default_icon: "Default Icon", default_color: "Default Color"
         })[s.name] || s.name;
     }
@@ -161,18 +172,44 @@ class LLMVisionCard extends BaseLLMVisionCard {
         this.setCommonConfig(config, { requireEventLimits: true });
     }
     static getConfigElement() { return document.createElement('timeline-card-editor'); }
-    static getStubConfig() { return { entity: 'calendar.llm_vision_timeline', number_of_hours: 24, number_of_events: 3, language: 'en' }; }
+    static getStubConfig() { return { number_of_days: 7, number_of_events: 3, language: 'en', time_format: '24h', filter_false_positives: true }; }
+
+    getCardSize() {
+        return 3;
+    }
+
+    // The rules for sizing your card in the grid in sections view
+    getGridOptions() {
+        return {
+            rows: 5,
+            columns: 9,
+            min_rows: 2,
+            max_rows: 8,
+            min_columns: 9,
+            max_columns: 24
+        };
+    }
 
     set hass(hass) {
         if (!this.content) {
+            // Adhere to the grid cell allocated to the card
+            this.style.display = 'block';
+            this.style.height = '100%';
+
             this.innerHTML = `
                 <ha-card style="padding:16px;">
                     ${this.header !== "" ? `<div class="card-header" style="font-size:1.3em;font-weight:600;padding:0 0 5px 0;">${this.header || "LLM Vision Events"}</div>` : ""}
                     <div class="card-content"></div>
                 </ha-card>
                 <style>
-                    .card-content{padding:0;}
+                    /* Stretch the card to the allocated grid cell */
+                    ha-card{height:100%;display:flex;flex-direction:column;box-sizing:border-box;}
+
+                    /* The scrollable content area inside the card */
+                    .card-content{padding:0;flex:1 1 auto;min-height:0;overflow:auto;}
+
                     .event-container{display:flex;align-items:center;justify-content:flex-start;height:75px;cursor:pointer;margin-bottom:8px;}
+                    .event-container.empty-state{height:100%;justify-content:center;align-items:center;text-align:center;cursor:default;margin-bottom:0;}
                     .event-container:last-child{margin-bottom:0;}
                     .event-container img{height:100%;aspect-ratio:1/1;margin-left:auto;border-radius:12px;object-fit:cover;}
                     .event-container h3{font-weight:var(--ha-font-weight-medium,500);font-size:var(--ha-font-size-m,14px);margin:0;flex-grow:1;color:var(--primary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -191,37 +228,44 @@ class LLMVisionCard extends BaseLLMVisionCard {
             }
         }
 
-        const raw = this._readCalendarAttributes(hass);
-        if (!raw) return;
+        this._loadAndRender(hass);
+    }
+
+
+    async _loadAndRender(hass) {
+        let details = await this.fetchEvents(
+            hass,
+            this.number_of_events,
+            this.number_of_days,
+            this.camera_filters,
+            this.category_filters);
+        if (!details) return;
+        details = this._applyAllFilters(details);
 
         const currentHash = this._hashState({
-            ...raw,
+            ...details,
             category_filters: this.category_filters,
             camera_filters: this.camera_filters,
             number_of_events: this.number_of_events,
-            number_of_hours: this.number_of_hours
+            number_of_days: this.number_of_days,
+            time_format: this.time_format,
+            filter_false_positives: this.filter_false_positives
         });
         if (currentHash === this._lastEventHash) return;
         this._lastEventHash = currentHash;
 
-        let details = this._buildEventDetails(hass, raw);
-        if (this.number_of_hours) details = this._filterByHours(details, this.number_of_hours);
-        details = this._applyAllFilters(details);
         if (!details.length) {
             this.content.innerHTML = '';
             let key;
             if (this.category_filters.length) key = 'noEventsCategory';
             else if (this.camera_filters.length) key = 'noEventsCamera';
-            else if (this.number_of_hours) key = 'noEventsHours';
+            else if (this.number_of_days) key = 'noEventsHours';
             else key = 'noEvents';
             let msg = translate(key, this.language) || "No events found.";
-            if (key === 'noEventsHours') msg = msg.replace('{hours}', this.number_of_hours);
-            this.content.innerHTML = `<div class="event-container" style="display:flex;align-items:center;justify-content:center;height:100%;"><h3>${msg}</h3></div>`;
+            if (key === 'noEventsHours') msg = msg.replace('{hours}', this.number_of_days);
+            this.content.innerHTML = `<div class="event-container empty-state"><h3>${msg}</h3></div>`;
             return;
         }
-        details = this._sort(details);
-        details = this._limit(details);
-
         this._render(details, hass);
     }
 
@@ -239,12 +283,12 @@ class LLMVisionCard extends BaseLLMVisionCard {
                 this.content.appendChild(header);
                 lastDate = dateLabel;
             }
-            const result = getIcon(d.event, this.language);
-            let { icon, color: defaultColor, category } = result;
-            if (category === undefined && this.default_icon) {
+            const result = getIcon(d.category, d.label);
+            let { icon, color: defaultColor } = result;
+            if ((d.category === undefined || d.category === '') && this.default_icon) {
                 icon = this.default_icon;
             }
-            const colorsComputed = this.computeColors(category, defaultColor);
+            const colorsComputed = this.computeColors(d.category, defaultColor);
             const container = document.createElement('div');
             container.classList.add('event-container');
             container.innerHTML = `
@@ -252,7 +296,7 @@ class LLMVisionCard extends BaseLLMVisionCard {
                     <ha-icon icon="${icon}" style="color:${colorsComputed.iconColorRgba};"></ha-icon>
                 </div>
                 <div class="event-details">
-                    <h3>${d.event}</h3>
+                    <h3>${d.title}</h3>
                     <p>${d.cameraName ? `${timeStr} • ${d.cameraName}` : timeStr}</p>
                 </div>
                 <img alt="Key frame ${idx + 1}" style="display:none;" onerror="this.style.display='none'">
@@ -261,14 +305,17 @@ class LLMVisionCard extends BaseLLMVisionCard {
             container.addEventListener('click', () => {
                 this.resolveKeyFrame(hass, d.keyFrame).then(url => {
                     this.showPopup({
-                        event: d.event,
-                        summary: d.summary,
+                        event: d.title,
+                        summary: d.description,
                         startTime: d.startTime,
                         keyFrame: url,
                         cameraName: d.cameraName,
-                        icon,
-                        prefix: 'popup'
-                    });
+                        category: d.category,
+                        label: d.label,
+                        icon: icon,
+                        prefix: 'popup',
+                        eventId: d.id
+                    }, hass);
                 });
             });
             this.content.appendChild(container);
@@ -281,7 +328,7 @@ class LLMVisionCard extends BaseLLMVisionCard {
     }
 
     static getStubConfig() {
-        return { entity: 'calendar.llm_vision_timeline', number_of_hours: 24, number_of_events: 5, language: 'en' };
+        return { number_of_days: 24, number_of_events: 5, language: 'en', time_format: '24h', filter_false_positives: true };
     }
 }
 
