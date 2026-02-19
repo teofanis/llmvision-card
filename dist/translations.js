@@ -82,8 +82,8 @@ export const it = {
     "text": {
         "noEvents": "Nessun Evento",
         "noEventsDays": "Nessun Evento nelle ultime {days} giorni",
-        "noEventsCamera": "Nessun evento trovato per la(les) telecamera(e) selezionata(e).",
-        "noEventsCategory": "Nessun evento trovato per la(les) categoria(e) selezionata(e).",
+        "noEventsCamera": "Nessun evento trovato per la/le telecamera/e selezionata/e.",
+        "noEventsCategory": "Nessun evento trovato per la/le categoria/e selezionata/e.",
         "today": "Oggi",
         "yesterday": "Ieri"
     }
@@ -100,11 +100,11 @@ export const nl = {
 }
 export const pl = {
     "text": {
-        "noEvents": "Brak aktywnosci",
-        "noEventsDays": "Brak aktywnosci w ostatnich {days} dniach",
-        "noEventsCamera": "Nie znaleziono aktywnosci dla wybranej kamery.",
-        "noEventsCategory": "Nie znaleziono aktywnosci dla wybranej kategorii.",
-        "today": "Dzis",
+        "noEvents": "Brak aktywności",
+        "noEventsDays": "Brak aktywności w ostatnich {days} dniach",
+        "noEventsCamera": "Nie znaleziono aktywności dla wybranej kamery.",
+        "noEventsCategory": "Nie znaleziono aktywności dla wybranej kategorii.",
+        "today": "Dziś",
         "yesterday": "Wczoraj"
     }
 }
