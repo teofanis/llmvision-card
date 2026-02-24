@@ -164,7 +164,7 @@ export class LLMVisionPreviewCard extends BaseLLMVisionCard {
                 <style>
                 .llm-preview-card{height:100%;display:flex;}
                 .llm-preview-card .preview-card-content{flex:1;display:flex;flex-direction:column;}
-                .preview-event-container{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:var(--ha-card-border-radius,12px);background:var(--ha-card-background,var(--card-background-color,#f3f3f3));cursor:pointer;}
+                .preview-event-container{position:relative;width:100%;aspect-ratio:16/9;min-height:120px;overflow:hidden;border-radius:var(--ha-card-border-radius,12px);background:var(--ha-card-background,var(--card-background-color,#f3f3f3));cursor:pointer;}
                 .preview-event-image{position:absolute;inset:0;width:100%;height:100%;border-radius:var(--ha-card-border-radius,12px);object-fit:cover;display:block;}
                 .preview-event-vignette{position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(to bottom,rgba(0,0,0,0.55)0%,rgba(0,0,0,0)30%,rgba(0,0,0,0)70%,rgba(0,0,0,0.55)100%);border-radius:var(--ha-card-border-radius,12px);}
                 .preview-icon-container{position:absolute;top:3px;left:3px;width:40px;height:40px;border-radius:var(--ha-card-border-radius,25px);display:flex;align-items:center;justify-content:center;background:none;z-index:2;}
@@ -220,6 +220,7 @@ export class LLMVisionPreviewCard extends BaseLLMVisionCard {
     _render(details, hass) {
         let event = details[0];
         const container = document.createElement('div');
+        container.classList.add('preview-event-container');
         const result = getIcon(event.title, this.language);
         let { icon, color: defaultColor, category } = result;
         if ((event.category === undefined || event.category === '') && this.default_icon) {
