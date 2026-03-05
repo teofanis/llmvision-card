@@ -28,6 +28,16 @@ export const cs = {
         "yesterday": "Včera"
     }
 }
+export const da = {
+    "text": {
+        "noEvents": "Ingen hændelser",
+        "noEventsDays": "Ingen hændelser de sidste {days} dage",
+        "noEventsCamera": "Ingen hændelser fundet for de valgte kamera(er).",
+        "noEventsCategory": "Ingen hændelser fundet for den valgte kategori.",
+        "today": "I dag",
+        "yesterday": "I går"
+    }
+}
 export const de = {
     "text": {
         "noEvents": "Keine Ereignisse",
