@@ -1,5 +1,5 @@
 import { labels } from './labels.js?v=1.6.0';
-import { bg, ca, cs, de, en, es, fr, hu, it, nl, pl, pt, sk, sv } from './translations.js?v=1.6.0';
+import { bg, ca, cs, da, de, en, es, fr, hu, it, nl, pl, pt, sk, sv } from './translations.js?v=1.6.0';
 
 export function hexToRgba(hex, alpha = 1) {
     let c = hex.replace('#', '');
@@ -32,6 +32,7 @@ const translations = {
     bg: bg.text,
     ca: ca.text,
     cs: cs.text,
+    da: da.text,
     de: de.text,
     en: en.text,
     es: es.text,
