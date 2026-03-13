@@ -100,6 +100,7 @@ class TimelineCardEditor extends LitElement {
                             { value: "bg", label: "Bulgarian" },
                             { value: "ca", label: "Catalan" },
                             { value: "cz", label: "Czech" },
+                            { value: "da", label: "Danish" },
                             { value: "nl", label: "Dutch" },
                             { value: "en", label: "English" },
                             { value: "fr", label: "French" },

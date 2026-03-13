@@ -100,7 +100,7 @@ export class BaseLLMVisionCard extends HTMLElement {
 
     _filterNoActivity(details) {
         return details.filter((d) => (d?.title || '').trim().toLowerCase() !== 'no activity observed');
-    }    
+    }
 
     _filterByHours(details, hours) {
         if (!hours) return details;
@@ -247,6 +247,8 @@ export class BaseLLMVisionCard extends HTMLElement {
         const menuListClass = `${prefix}-menu-list`;
         const menuItemClass = `${prefix}-menu-item`;
         const menuDeleteClass = `${prefix}-menu-item-delete`;
+        const menuThumbUpClass = `${prefix}-menu-item-thumbs-up`;
+        const menuThumbDownClass = `${prefix}-menu-item-thumbs-down`;
 
         const normalize = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
         const shouldShowCategory = Boolean(category && !(label && normalize(label) === normalize(category)));
@@ -259,11 +261,19 @@ export class BaseLLMVisionCard extends HTMLElement {
                         </button>
                         <div class="spacer"></div>
                         ${eventId ? `
-                        <div class="${menuWrapperClass}">
+                            <div class="${menuWrapperClass}">
                             <button class="${menuBtnClass}" title="Menu" style="font-size:26px">
                                 <ha-icon icon="mdi:dots-vertical"></ha-icon>
                             </button>
                             <div class="${menuListClass}" hidden>
+                                <div class="${prefix}-menu-rate-row">
+                                    <button class="${menuItemClass} ${menuThumbUpClass}" title="Good response">
+                                        <ha-icon icon="mdi:thumb-up-outline"></ha-icon>
+                                    </button>
+                                    <button class="${menuItemClass} ${menuThumbDownClass}" title="Bad response">
+                                        <ha-icon icon="mdi:thumb-down-outline"></ha-icon>
+                                    </button>
+                                </div>
                                 <button class="${menuItemClass} ${menuDeleteClass}" title="Delete event">
                                     <ha-icon icon="mdi:trash-can-outline"></ha-icon>
                                     <span>${translate('delete', this.language) || 'Delete'}</span>
@@ -448,6 +458,20 @@ export class BaseLLMVisionCard extends HTMLElement {
                         min-width: 160px;
                         z-index: 10;
                     }
+                    .${prefix}-menu-rate-row {
+                        display: flex;
+                        gap: 8px;
+                        align-items: center;
+                        margin-bottom: 6px;
+                        width: 100%;
+                    }
+                    .${menuItemClass}.${menuThumbUpClass}, .${menuItemClass}.${menuThumbDownClass} {
+                        flex: 1 1 0;
+                        min-width: 0;
+                        padding: 8px 12px;
+                        justify-content: center;
+                        box-sizing: border-box;
+                    }
                     .${menuItemClass} {
                         width: 100%;
                         display: flex;
@@ -465,6 +489,12 @@ export class BaseLLMVisionCard extends HTMLElement {
                     }
                     .${menuDeleteClass} {
                         color: var(--error-color, #d32f2f);
+                    }
+                    .${menuThumbUpClass} {
+                        padding: 6px !important;
+                    }
+                    .${menuThumbDownClass} {
+                        padding: 6px !important;
                     }
     
                     @media (max-width: 768px) {
@@ -544,6 +574,336 @@ export class BaseLLMVisionCard extends HTMLElement {
                     deleteItem.disabled = false;
                     if (menuList) menuList.hidden = true;
                 }
+            });
+        }
+
+        // Wire up thumbs up / thumbs down inside menu
+        const thumbsUpItem = wrapper.querySelector(`.${menuThumbUpClass}`);
+        const thumbsDownItem = wrapper.querySelector(`.${menuThumbDownClass}`);
+        const sendFeedback = async (feedback, el, reason, userFeedbackText, correctedTitle = '', correctedDescription = '') => {
+            if (el.disabled) return;
+            el.disabled = true;
+            const eventDetail = { eventId, feedback };
+            this.dispatchEvent(new CustomEvent('llmvision-feedback', { detail: eventDetail, bubbles: true, composed: true }));
+
+            // Prepare metadata to send
+            const metadata = {
+                title: event || '',
+                description: summary || '',
+                label: label || '',
+                category: category || '',
+                icon: icon || this.default_icon || '',
+                eventId: eventId || '',
+                startTime: startTime || ''
+            };
+
+            try {
+                // Only attempt upload if we have a keyFrame URL
+                if (keyFrame) {
+                    let blob;
+                    if (keyFrame.startsWith('data:')) {
+                        const res = await fetch(keyFrame);
+                        blob = await res.blob();
+                    } else {
+                        const res = await fetch(keyFrame, { mode: 'cors' });
+                        blob = await res.blob();
+                    }
+
+                    const contentType = blob.type || 'image/jpeg';
+                    const ext = contentType.split('/')[1] || 'jpg';
+                    const filename = `event_${eventId || Date.now()}.${ext}`;
+
+                    // Send request to feedback API
+                    const app_key = 'e2d892b226e34339940079041ebc65fed345a5cdbd888b6f042ec2c44e0f9a2a';
+                    try {
+                        const form = new FormData();
+                        form.append('image', blob, filename);
+                        form.append('isTitle', metadata.title || '');
+                        form.append('shouldBeTitle', correctedTitle || event || '');
+                        form.append('isDescription', metadata.description || '');
+                        form.append('shouldBeDescription', correctedDescription || summary || '');
+                        form.append('isLabel', metadata.label || '');
+                        form.append('shouldBeLabel', label || '');
+                        form.append('isCategory', metadata.category || '');
+                        form.append('shouldBeCategory', category || '');
+                        form.append('isIcon', metadata.icon || '');
+                        form.append('shouldBeIcon', icon || '');
+                        form.append('upDown', feedback || '');
+                        form.append('reason', reason || '');
+                        // Include any additional feedback provided by the user
+                        form.append('feedback', userFeedbackText || '');
+
+                        const res = await fetch('https://feedback.llmvision.org/', {
+                            method: 'POST',
+                            headers: {
+                                'X-App-Key': app_key
+                            },
+                            body: form,
+                            mode: 'cors'
+                        });
+
+                        if (!res.ok) {
+                            const text = await res.text().catch(() => '');
+                            console.error('Feedback upload failed:', res.status, text);
+                        } else {
+                            console.log('Feedback uploaded successfully');
+                        }
+                    } catch (err) {
+                        console.error('Error uploading snapshot to feedback API:', err);
+                    }
+
+                }
+            } catch (err) {
+                console.error('Error uploading snapshot to feedback API:', err);
+            } finally {
+                this.closePopup(wrapper, overlayClass, popstateHandler, escHandler);
+            }
+        };
+        // Opens a multi-page feedback-detail flow (reason -> conditional page -> details)
+        const openFeedbackDetail = (feedback, el) => {
+            if (el.disabled) return;
+            const fdOverlayClass = `${prefix}-feedback-detail-overlay`;
+            const fdContentClass = `${prefix}-feedback-detail-content`;
+            const fdWrapper = document.createElement('div');
+
+            // Page templates
+            const reasons = [
+                { value: 'event_not_no_activity', label: `Event is not 'no activity'` },
+                { value: 'event_is_no_activity', label: `Event should be 'no activity'` },
+                { value: 'title_inaccurate', label: 'Title is not accurate' },
+                { value: 'description_inaccurate', label: 'Description is not accurate' },
+                { value: 'incorrect_label', label: 'Incorrect label' },
+                { value: 'incorrect_category', label: 'Incorrect category' },
+                { value: 'other', label: 'Other' }
+            ];
+
+            fdWrapper.innerHTML = `
+                <div class="${fdOverlayClass}">
+                    <div class="${fdContentClass}">
+                        <button class="${prefix}-fd-close" title="Close" aria-label="Close" style="font-size:20px">✕</button>
+                            <div class="${prefix}-fd-page ${prefix}-fd-page-1">
+                                <h2>${translate('feedback_reason', this.language) || 'Select reason'}</h2>
+                                <div class="${prefix}-fd-reason-list">
+                                    ${reasons.map(r => `
+                                        <button type="button" class="${prefix}-fd-reason-btn" data-value="${r.value}">${r.label}</button>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                        <div class="${prefix}-fd-page ${prefix}-fd-page-2" hidden>
+                            <!-- dynamic second page: for event_not_no_activity show title+description, otherwise show a short note -->
+                            <div class="${prefix}-fd-page-2-content" style="margin-top:24px"></div>
+                            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+                                <button class="${prefix}-fd-next-2">${translate('next', this.language) || 'Next'}</button>
+                            </div>
+                        </div>
+
+                        <div class="${prefix}-fd-page ${prefix}-fd-page-3" hidden>
+                            <h2>${translate('additional_details', this.language) || 'Additional details'}</h2>
+                            <textarea class="${prefix}-fd-final-details" rows="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(0,0,0,0.12)"></textarea>
+                            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+                                <button class="${prefix}-fd-send">${translate('send', this.language) || 'Send'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    .${fdOverlayClass} { position: fixed; inset: 0; display:flex;align-items:center;justify-content:center;z-index:1100;background:rgba(0,0,0,0.45); }
+                    .${fdContentClass} { position:relative; background: var(--ha-card-background, var(--card-background-color, #fff)); color: var(--primary-text-color); padding: 18px; border-radius:12px; width: 520px; max-width: calc(100% - 40px); max-height: calc(100vh - 40px); overflow-y: auto; }
+                    .${fdContentClass} h2 { margin:0 0 8px 0; text-align:center }
+                    .${prefix}-fd-close { position:absolute; left:12px; top:12px; background:none; border:none; cursor:pointer; color:var(--primary-text-color); }
+                    .${prefix}-fd-reason-list { }
+                    .${prefix}-fd-reason-btn {
+                        cursor: pointer;
+                        display: block;
+                        width: 100%;
+                        text-align: left;
+                        padding: 10px;
+                        margin: 6px 0;
+                        border-radius: 8px;
+                        border: none;
+                        transition: background 120ms ease, transform 60ms ease;
+                        background: transparent;
+                    }
+                    .${prefix}-fd-reason-btn:hover {
+                        background: rgba(0,0,0,0.04);
+                    }
+                    .${prefix}-fd-reason-btn.selected {
+                        background: rgba(0,0,0,0.06);
+                    }
+                </style>
+            `;
+
+            const overlayEl = fdWrapper.querySelector(`.${fdOverlayClass}`);
+            const closeFdBtn = fdWrapper.querySelector(`.${prefix}-fd-close`);
+            const page1 = fdWrapper.querySelector(`.${prefix}-fd-page-1`);
+            const page2 = fdWrapper.querySelector(`.${prefix}-fd-page-2`);
+            const page3 = fdWrapper.querySelector(`.${prefix}-fd-page-3`);
+
+            const cancelBtn = fdWrapper.querySelector(`.${prefix}-fd-cancel`);
+            const nextBtn = fdWrapper.querySelector(`.${prefix}-fd-next`);
+            const next2Btn = fdWrapper.querySelector(`.${prefix}-fd-next-2`);
+            const sendBtn = fdWrapper.querySelector(`.${prefix}-fd-send`);
+
+            const page2Content = fdWrapper.querySelector(`.${prefix}-fd-page-2-content`);
+            const finalDetails = fdWrapper.querySelector(`.${prefix}-fd-final-details`);
+
+            const removeFd = () => {
+                if (fdWrapper._escHandler) document.removeEventListener('keydown', fdWrapper._escHandler);
+                if (fdWrapper.parentElement) document.body.removeChild(fdWrapper);
+            };
+
+            if (cancelBtn) cancelBtn.addEventListener('click', (ev) => { ev.stopPropagation(); removeFd(); });
+            if (closeFdBtn) {
+                // Close button doubles as a "back" button on page 2 and 3
+                const handleCloseOrBack = (ev) => {
+                    ev.stopPropagation();
+                    if (!page2.hidden && page3.hidden) {
+                        // on page2 -> go back to page1
+                        page2.hidden = true;
+                        page1.hidden = false;
+                        closeFdBtn.textContent = '✕';
+                        closeFdBtn.title = 'Close';
+                        closeFdBtn.setAttribute('aria-label', 'Close');
+                    } else if (!page3.hidden) {
+                        // on page3 -> go back to page2
+                        page3.hidden = true;
+                        page2.hidden = false;
+                        closeFdBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z"/></svg>
+                        `;
+                        closeFdBtn.title = 'Back';
+                        closeFdBtn.setAttribute('aria-label', 'Back');
+                    } else {
+                        // default: remove dialog
+                        removeFd();
+                    }
+                };
+                closeFdBtn.addEventListener('click', handleCloseOrBack);
+            }
+            overlayEl.addEventListener('click', (ev) => { if (ev.target === overlayEl) removeFd(); });
+            fdWrapper._escHandler = (ev) => { if (ev.key === 'Escape') removeFd(); };
+            document.addEventListener('keydown', fdWrapper._escHandler);
+
+            // Make reason buttons immediately advance to page 2
+            const reasonBtns = fdWrapper.querySelectorAll(`.${prefix}-fd-reason-btn`);
+            reasonBtns.forEach((btn) => {
+                btn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    // mark selected
+                    reasonBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    const reason = btn.dataset.value;
+                    // populate page2 based on reason
+                    page2Content.innerHTML = '';
+                    if (reason === 'event_not_no_activity') {
+                        page2Content.innerHTML = `
+                            <label style="display:block;margin:8px 0;font-weight:600">${translate('correct_title', this.language) || 'Correct title'}</label>
+                            <input class="${prefix}-fd-correct-title" type="text" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(0,0,0,0.12)">
+                            <label style="display:block;margin:8px 0;font-weight:600">${translate('correct_description', this.language) || 'Correct description'}</label>
+                            <textarea class="${prefix}-fd-correct-description" rows="4" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(0,0,0,0.12)"></textarea>
+                        `;
+                    } else {
+                        page2Content.innerHTML = `
+                            <p style="margin:6px 0">${translate('confirm_selection', this.language) || 'You can add more details on the next page.'}</p>
+                        `;
+                    }
+                    page2.dataset.reason = reason;
+                    page1.hidden = true;
+                    page2.hidden = false;
+                    // change close button into back-arrow
+                    if (closeFdBtn) {
+                        closeFdBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z"/></svg>
+                        `;
+                        closeFdBtn.title = 'Back';
+                        closeFdBtn.setAttribute('aria-label', 'Back');
+                    }
+                });
+            });
+
+            // Next button fallback (for accessibility) - use selected reason button
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const selectedBtn = fdWrapper.querySelector(`.${prefix}-fd-reason-btn.selected`);
+                    if (!selectedBtn) return;
+                    selectedBtn.click();
+                });
+            }
+
+            next2Btn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                // move to final page
+                page2.hidden = true;
+                page3.hidden = false;
+                // ensure close button stays as back-arrow
+                if (closeFdBtn) {
+                    closeFdBtn.textContent = '<-';
+                    closeFdBtn.title = 'Back';
+                    closeFdBtn.setAttribute('aria-label', 'Back');
+                }
+            });
+
+            sendBtn.addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                sendBtn.disabled = true;
+                const reason = page2.dataset.reason || '';
+                let corrections = '';
+                if (reason === 'event_not_no_activity') {
+                    const t = fdWrapper.querySelector(`.${prefix}-fd-correct-title`);
+                    const d = fdWrapper.querySelector(`.${prefix}-fd-correct-description`);
+                    const titleVal = t ? (t.value || '').trim() : '';
+                    const descVal = d ? (d.value || '').trim() : '';
+                    if (titleVal) corrections += `Title: ${titleVal}`;
+                    if (descVal) corrections += (corrections ? '\n' : '') + `Description: ${descVal}`;
+                }
+                const finalText = (finalDetails.value || '').trim();
+                // Include any title/description corrections from page2 (if present)
+                let correctedTitle = '';
+                let correctedDescription = '';
+                if (reason === 'event_not_no_activity') {
+                    const t = fdWrapper.querySelector(`.${prefix}-fd-correct-title`);
+                    const d = fdWrapper.querySelector(`.${prefix}-fd-correct-description`);
+                    correctedTitle = t ? (t.value || '').trim() : '';
+                    correctedDescription = d ? (d.value || '').trim() : '';
+                }
+                await sendFeedback(feedback, el, reason, finalText, correctedTitle, correctedDescription);
+                removeFd();
+                // open snackbar to thank the user for their feedback
+                showSnackbar('Thanks for your feedback!');  //TODO: translate
+            });
+
+            document.body.appendChild(fdWrapper);
+        };
+
+        const showSnackbar = (message) => {
+            // close event detail popups before showing the snackbar to ensure it appears above them
+            this.closePopup(wrapper, overlayClass, popstateHandler, escHandler);
+            this.dispatchEvent(new CustomEvent('hass-notification', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    message,
+                    duration: 4000
+                }
+            }));
+        };
+
+        if (thumbsUpItem && eventId) {
+            thumbsUpItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (menuList) menuList.hidden = true;
+                // open snackbar to thank the user for their feedback
+                sendFeedback('up', thumbsUpItem, 'good_response', '', '');
+                showSnackbar('Thanks for your feedback!'); //TODO: translate
+            });
+        }
+        if (thumbsDownItem && eventId) {
+            thumbsDownItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (menuList) menuList.hidden = true;
+                openFeedbackDetail('down', thumbsDownItem);
             });
         }
 
